@@ -3,6 +3,7 @@ import { useWizardStore } from '@/store/useWizardStore'
 import BrandPreview from '@/components/wizard/BrandPreview'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
+const { step, formData, setField, toggleFeature, nextStep, prevStep } = useWizardStore()
 
 export default function WizardPage() {
   const { step, formData, setField, nextStep, prevStep } = useWizardStore()
@@ -16,6 +17,7 @@ export default function WizardPage() {
         title: formData.projectName,
         platform_type: formData.projectType,
         brand_config: { color: formData.brandColor },
+        features: formData.features,
         status: 'pending'
       })
 
@@ -55,6 +57,31 @@ export default function WizardPage() {
         )}
 
         {step === 3 && (
+            <div className="space-y-6">
+                <h2 className="text-xl font-bold text-gray-800">What features do you need?</h2>
+                <div className="grid grid-cols-2 gap-4">
+                    {['User Login', 'Payments (Stripe)', 'Chat System', 'Map / GPS', 'Admin Panel', 'File Upload'].map((feat) => (
+                        <button
+                            key={feat}
+                            onClick={() => toggleFeature(feat)}
+                            className={`p-4 rounded-xl border text-left transition-all ${
+                                formData.features.includes(feat)
+                                    ? 'border-black bg-black text-white shadow-lg'
+                                    : 'border-gray-200 hover:border-black text-gray-600'
+                            }`}
+                        >
+                            {feat}
+                        </button>
+                    ))}
+                </div>
+                <div className="flex gap-2 mt-6">
+                    <button onClick={prevStep} className="border px-4 py-2 rounded">Back</button>
+                    <button onClick={nextStep} className="bg-black text-white px-4 py-2 rounded">Next</button>
+                </div>
+            </div>
+        )}
+
+        {step === 4 && (
             <div className="text-center">
                 <p className="mb-4">Ready to submit <strong>{formData.projectName}</strong>?</p>
                 <div className="flex justify-center gap-2">

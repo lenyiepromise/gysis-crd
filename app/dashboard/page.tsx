@@ -62,6 +62,16 @@ export default async function Dashboard() {
                 </span>
               </div>
 
+              {/* Feature Tags */}
+              <div className="mt-4 flex flex-wrap gap-2">
+                {/* We need to cast it as an array to map over it safely */}
+                {(project.features as string[])?.map((feat, i) => (
+                   <span key={i} className="text-[10px] bg-gray-100 border border-gray-200 px-2 py-1 rounded text-gray-600">
+                     {feat}
+                   </span>
+                ))}
+              </div>
+
             </div>
           ))}
 
