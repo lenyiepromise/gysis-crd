@@ -42,23 +42,21 @@ export default function WizardPage() {
         return
     }
 
-    // 2. ASK AI FOR PRICE 🤖
-    let aiData = null;
+    // 2. Calculate Exact Price 🧮
+    let finalPrice = null;
+    let finalStatus = 'pending_review'; // Default if calculation fails
+
     try {
-        // We pass the form data to our new Server Action
-        aiData = await generateAiQuote(formData);
-        console.log("AI Estimate:", aiData);
+        const calculation = await generateAiQuote(formData);
+        if (calculation && calculation.estimated_price) {
+            finalPrice = calculation.estimated_price;
+            finalStatus = 'quoted'; // <--- IMPORTANT: Sets status to QUOTED so user can see it
+        }
     } catch (e) {
-        console.log("AI Offline, skipping...");
+        console.error("Calculation failed");
     }
 
-    // 3. Determine Status & Price
-    // If AI works, we set status to 'quoted'. If not, 'pending_review'.
-    const initialStatus = aiData ? 'quoted' : 'pending_review';
-    // Calculate average price from range
-    const finalPrice = aiData ? Math.round((aiData.price_low + aiData.price_high) / 2) : null;
-
-    // 4. Save to Database
+    // 3. Save to Database
     const { error } = await supabase.from('projects').insert({
         user_id: session.user.id,
         title: formData.projectName,
@@ -68,9 +66,9 @@ export default function WizardPage() {
         features: formData.features,
         attachments: formData.attachments,
         
-        // NEW FIELDS
-        status: initialStatus,
-        price: finalPrice 
+        // SAVE THE EXACT PRICE
+        price: finalPrice, 
+        status: finalStatus
     })
 
     setIsSubmitting(false)
@@ -78,13 +76,8 @@ export default function WizardPage() {
     if (error) {
         alert('Error: ' + error.message)
     } else {
-        // Show the result immediately
-        if (aiData) {
-            alert(`Estimate Generated: $${aiData.price_low} - $${aiData.price_high}`)
-        } else {
-            alert('Project submitted for manual review.')
-        }
-        router.push('/dashboard')
+        // No alert box! Just go straight to the dashboard to see the price.
+        router.push(`/dashboard`) 
     }
   }
 
