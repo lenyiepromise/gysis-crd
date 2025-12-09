@@ -1,88 +1,86 @@
+"use client"
 import { supabase } from '@/lib/supabase'
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
-// This is a Server Component. It runs on the server to fetch data FAST.
-export const revalidate = 0; // Disable caching so you see new orders instantly
+export default function Dashboard() {
+  const [projects, setProjects] = useState<any[]>([])
+  const [userEmail, setUserEmail] = useState('')
+  const [isAdmin, setIsAdmin] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const router = useRouter()
 
-export default async function Dashboard() {
-  
-  // 1. Fetch all projects from Supabase
-  const { data: projects, error } = await supabase
-    .from('projects')
-    .select('*')
-    .order('created_at', { ascending: false })
+  useEffect(() => {
+    async function loadData() {
+       const { data: { session } } = await supabase.auth.getSession()
+       
+       if (!session) {
+         router.push('/login')
+         return
+       }
 
-  if (error) {
-    return <div className="p-10 text-red-500">Error loading data: {error.message}</div>
-  }
+       setUserEmail(session.user.email || '')
+       
+       // CHANGE TO YOUR EMAIL
+       const adminCheck = session.user.email === 'lenyiepromise@gmail.com'
+       setIsAdmin(adminCheck)
+
+       let query = supabase.from('projects').select('*').order('created_at', { ascending: false })
+       
+       // If NOT admin, only show MY projects
+       if (!adminCheck) query = query.eq('user_id', session.user.id)
+       
+       const { data } = await query
+       if (data) setProjects(data)
+       setLoading(false)
+    }
+
+    loadData()
+  }, [router])
+
+  if (loading) return <div className="min-h-screen flex items-center justify-center font-mono text-gysis-main animate-pulse">LOADING_DASHBOARD...</div>
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
-      <div className="max-w-5xl mx-auto">
+    <div className="min-h-screen bg-[#F5F7FA] p-8">
+      <div className="max-w-7xl mx-auto">
         
-        {/* Header */}
-        <div className="flex justify-between items-center mb-8">
+        {/* HEADER */}
+        <div className="flex justify-between items-end mb-10 border-b border-gray-200 pb-6">
           <div>
-            <h1 className="text-3xl font-bold">Project Dashboard</h1>
-            <p className="text-gray-500">Gysis Client Requests</p>
+            <h1 className="text-3xl font-mono font-bold text-gysis-main uppercase">
+              {isAdmin ? 'System_Admin' : 'Client_Portal'}
+            </h1>
+            <p className="font-mono text-xs text-gray-400 mt-1">LOGGED IN AS: {userEmail}</p>
           </div>
-          <Link href="/wizard" className="bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-800">
-            + New Request
+          <Link href="/wizard" className="bg-gysis-main text-white px-6 py-3 font-mono font-bold text-sm shadow-[4px_4px_0px_#FFB703]">
+            + NEW_SPEC
           </Link>
         </div>
 
-        {/* The Grid of Orders */}
+        {/* PROJECT GRID */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          
-          {projects?.map((project) => (
-            <div key={project.id} className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition">
-              
-              {/* Status Badge */}
-              <div className="flex justify-between items-start mb-4">
-                <span className="bg-yellow-100 text-yellow-800 text-xs font-bold px-2 py-1 rounded uppercase">
-                  {project.status}
-                </span>
-                <span className="text-xs text-gray-400">
-                  {new Date(project.created_at).toLocaleDateString()}
-                </span>
-              </div>
-
-              {/* Title & Platform */}
-              <h3 className="font-bold text-lg mb-1">{project.title}</h3>
-              <p className="text-sm text-gray-500 capitalize mb-4">{project.platform_type} App</p>
-
-              {/* Brand DNA Visualizer */}
-              <div className="flex items-center gap-2 p-2 bg-gray-50 rounded border">
-                <div 
-                  className="w-6 h-6 rounded-full border shadow-sm"
-                  style={{ backgroundColor: project.brand_config?.color || '#000' }} 
-                ></div>
-                <span className="text-xs font-mono text-gray-600">
-                   {project.brand_config?.color}
-                </span>
-              </div>
-
-              {/* Feature Tags */}
-              <div className="mt-4 flex flex-wrap gap-2">
-                {/* We need to cast it as an array to map over it safely */}
-                {(project.features as string[])?.map((feat, i) => (
-                   <span key={i} className="text-[10px] bg-gray-100 border border-gray-200 px-2 py-1 rounded text-gray-600">
-                     {feat}
-                   </span>
-                ))}
-              </div>
-
-            </div>
+          {projects.map((project) => (
+            <Link key={project.id} href={`/dashboard/${project.id}`} className="block group">
+                <div className="bg-white border-2 border-gray-200 group-hover:border-gysis-main transition p-6 h-full flex flex-col">
+                    <div className="flex justify-between mb-4">
+                        <span className="font-mono text-[10px] text-gray-400">ID: {project.id.slice(0, 8)}</span>
+                        <span className={`font-mono text-[10px] px-2 py-1 uppercase font-bold
+                            ${project.status === 'pending_review' ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100'}`}>
+                            {project.status.replace('_', ' ')}
+                        </span>
+                    </div>
+                    <h3 className="font-bold text-xl text-gysis-main mb-2">{project.title}</h3>
+                    <p className="font-mono text-xs text-gray-500 uppercase">{project.platform_type}</p>
+                </div>
+            </Link>
           ))}
-
-          {/* Empty State */}
-          {projects?.length === 0 && (
-            <div className="col-span-full text-center py-20 text-gray-400">
-              No projects yet. Go create one!
-            </div>
-          )}
-
         </div>
+
+        {projects.length === 0 && (
+            <div className="text-center py-20 text-gray-400 font-mono">NO PROJECTS FOUND.</div>
+        )}
+
       </div>
     </div>
   )

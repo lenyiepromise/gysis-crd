@@ -4,12 +4,15 @@ type WizardState = {
   step: number
   formData: {
     projectName: string
+    description: string  // <--- NEW
     projectType: string
     brandColor: string
-    features: string[] // <--- NEW: Array of strings
+    features: string[]
+    attachments: string[] // <--- NEW (Stores URLs)
   }
   setField: (field: string, value: any) => void
-  toggleFeature: (feature: string) => void // <--- NEW: Action to add/remove features
+  toggleFeature: (feature: string) => void
+  addAttachment: (url: string) => void // <--- NEW ACTION
   nextStep: () => void
   prevStep: () => void
 }
@@ -18,9 +21,11 @@ export const useWizardStore = create<WizardState>((set) => ({
   step: 1,
   formData: {
     projectName: '',
+    description: '', // <--- NEW
     projectType: 'web',
     brandColor: '#000000',
-    features: [] // <--- NEW: Start empty
+    features: [],
+    attachments: []  // <--- NEW
   },
   
   setField: (field, value) => 
@@ -28,15 +33,20 @@ export const useWizardStore = create<WizardState>((set) => ({
       formData: { ...state.formData, [field]: value } 
     })),
 
-  // <--- NEW LOGIC: If it exists, remove it. If not, add it.
   toggleFeature: (feature) =>
     set((state) => {
       const current = state.formData.features;
       const updated = current.includes(feature)
-        ? current.filter((f) => f !== feature) // Remove
-        : [...current, feature]; // Add
+        ? current.filter((f) => f !== feature)
+        : [...current, feature];
       return { formData: { ...state.formData, features: updated } };
     }),
+
+  // <--- NEW: Add an image URL to the list
+  addAttachment: (url) => 
+    set((state) => ({
+      formData: { ...state.formData, attachments: [...state.formData.attachments, url] }
+    })),
 
   nextStep: () => set((state) => ({ step: state.step + 1 })),
   prevStep: () => set((state) => ({ step: state.step - 1 })),
