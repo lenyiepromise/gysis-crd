@@ -1,44 +1,38 @@
 "use server"
 
-// No API keys needed! 
 export async function generateAiQuote(data: any) {
-  // Simulate AI "thinking" time (makes it feel real)
+  // 1. Thinking Delay (Feels like AI)
   await new Promise(resolve => setTimeout(resolve, 1500));
 
   try {
-    let basePrice = 3000;
+    let price = 3000; // Starting Base Price
     
-    // 1. Platform Rules
-    if (data.projectType === 'mobile') basePrice = 5000;
-    if (data.projectType === 'both') basePrice = 8000;
+    // 2. Platform Multipliers
+    if (data.projectType === 'mobile') price = 5000;
+    if (data.projectType === 'both') price = 8500;
 
-    // 2. Feature Rules (Complexity Math)
+    // 3. Feature Costing
     const features = data.features || [];
-    let featureCost = 0;
-    
     features.forEach((feat: string) => {
-        if (['Payments (Stripe)', 'Map / GPS', 'Chat System'].includes(feat)) {
-            featureCost += 1500; // Complex features
+        if (['Payments (Stripe)', 'Map / GPS', 'Chat System', 'Admin Panel'].includes(feat)) {
+            price += 1200; // Expensive modules
         } else {
-            featureCost += 500; // Simple features
+            price += 400;  // Standard modules
         }
     });
 
-    // 3. Description Rules (Keyword Analysis)
-    const desc = data.description.toLowerCase();
+    // 4. Complexity Keywords
+    const desc = (data.description || '').toLowerCase();
     if (desc.includes('uber') || desc.includes('marketplace') || desc.includes('social')) {
-        basePrice = basePrice * 1.3; // +30% complexity for complex keywords
+        price = price * 1.25; // 25% Markup for complex logic
     }
 
-    const totalLow = Math.round(basePrice + featureCost);
-    const totalHigh = Math.round(totalLow * 1.2); // +20% buffer
+    // 5. Round to nearest $100 (Makes it look professional)
+    const exactPrice = Math.ceil(price / 100) * 100;
 
-    // Return the "AI" response
     return {
-        price_low: totalLow,
-        price_high: totalHigh,
+        estimated_price: exactPrice,
         timeline: features.length > 4 ? "6-8 weeks" : "3-4 weeks",
-        reasoning: "Calculated based on selected modules and platform complexity."
     };
 
   } catch (error) {
