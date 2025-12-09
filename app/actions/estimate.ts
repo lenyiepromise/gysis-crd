@@ -1,53 +1,52 @@
 "use server"
-import OpenAI from 'openai';
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// 1. Initialize Google Client
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
 export async function generateAiQuote(data: any) {
-  // 1. Define the Pricing Logic (The Prompt)
-  const systemPrompt = `
-    You are a Senior Project Manager at a software agency called Gysis.
-    Your job is to estimate development costs based on client specs.
-    
-    PRICING RULES:
-    - Base rate: $50/hour.
-    - Web App base: $3,000.
-    - Mobile App base: $5,000.
-    - Each "Simple" feature (Login, Feed) adds ~$500.
-    - Each "Complex" feature (Payments, Maps, Chat) adds ~$1,500.
-    - "Uber-like" or "Marketplace" keywords in description adds 30% complexity.
-
-    Analyze the user input and return a JSON object.
-    Do not be too cheap, do not be too expensive. Be realistic for an MVP.
-  `;
-
-  const userPrompt = `
-    Project Name: ${data.projectName}
-    Description: ${data.description}
-    Platform: ${data.projectType}
-    Features: ${data.features.join(', ')}
-  `;
-
   try {
-    const completion = await openai.chat.completions.create({
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt }
-      ],
-      model: "gpt-4o-mini", // Fast & Cost effective
-      response_format: { type: "json_object" },
-    });
+    // 2. Select the "Flash" model (Fast & Free)
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-    // Parse the AI's response
-    const result = JSON.parse(completion.choices[0].message.content || '{}');
-    
-    // Expected format: { price_low: 5000, price_high: 7000, timeline: "4 weeks" }
-    return result;
+    const prompt = `
+      You are a Senior Project Manager at Gysis CRD.
+      Estimate the cost for this software project.
+      
+      DETAILS:
+      - Project: ${data.projectName}
+      - Platform: ${data.projectType}
+      - Features: ${data.features.join(', ')}
+      - Description: ${data.description}
+
+      PRICING RULES:
+      - Base Web App: $3,000. Mobile: $5,000.
+      - Each feature adds $500 - $2000 depending on complexity.
+      - "Uber/Social/Marketplace" keywords increase cost by 30%.
+      
+      Return ONLY a raw JSON object (no markdown, no backticks) with this format:
+      {
+        "price_low": number,
+        "price_high": number,
+        "timeline": string,
+        "reasoning": string
+      }
+    `;
+
+    // 3. Generate Content
+    const result = await model.generateContent(prompt);
+    const response = result.response;
+    let text = response.text();
+
+    // 4. Clean up the response (Gemini sometimes adds ```json ... ``` wrappers)
+    text = text.replace(/```json/g, '').replace(/```/g, '').trim();
+
+    // 5. Parse
+    const parsed = JSON.parse(text);
+    return parsed;
 
   } catch (error) {
-    console.error("AI Error:", error);
-    return null; // If AI fails, we just return null and do manual quote
+    console.error("Gemini AI Error:", error);
+    return null; // Fallback to manual if it fails
   }
 }
